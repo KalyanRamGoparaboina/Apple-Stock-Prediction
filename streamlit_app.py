@@ -72,28 +72,32 @@ except ImportError:
 @st.cache_data
 def generate_data(n_points=200):
     np.random.seed(42)
+    # Simulate Apple-like stock price (random walk with drift and seasonality)
+    start_price = 150
+    returns = np.random.normal(0.0005, 0.01, n_points) # Mean drift of 0.05% per step
+    price = start_price * np.exp(np.cumsum(returns))
+    # Add some seasonality
     time_points = np.arange(n_points)
-    # Trend + Seasonality + Noise
-    data = 10 + 0.1 * time_points + 5 * np.sin(2 * np.pi * time_points / 12) + np.random.normal(0, 1, n_points)
-    return pd.Series(data)
+    price += 10 * np.sin(2 * np.pi * time_points / 20)
+    return pd.Series(price)
 
 # --- Sidebar ---
-st.sidebar.image("https://img.icons8.com/isometric/100/line-chart.png", width=80)
-st.sidebar.title("Configuration")
+st.sidebar.image("https://img.icons8.com/color/100/apple-logo.png", width=80)
+st.sidebar.title("Apple Stock AI")
 st.sidebar.markdown("---")
 
-data_points = st.sidebar.slider("Data Points", 50, 500, 200)
-forecast_steps = st.sidebar.number_input("Forecast Steps", 1, 50, 12)
+data_points = st.sidebar.slider("Historical Days", 50, 500, 200)
+forecast_steps = st.sidebar.number_input("Days to Forecast", 1, 50, 10)
 
 selected_models = st.sidebar.multiselect(
-    "Select Models to Compare",
+    "Select Forecasting Models",
     ["ARIMA", "SARIMA", "XGBoost", "LSTM"] if HAS_TF else ["ARIMA", "SARIMA", "XGBoost"],
     default=["ARIMA", "SARIMA", "XGBoost"]
 )
 
 # --- Main Page ---
-st.title("🚀 ProphetFlow AI")
-st.markdown("### Next-Generation Time Series Intelligence")
+st.title("🍎 Apple Stock Insight")
+st.markdown("### AI-Powered Market Forecasting Engine")
 
 data_series = generate_data(data_points)
 
