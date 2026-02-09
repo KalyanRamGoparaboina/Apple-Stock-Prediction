@@ -75,13 +75,14 @@ forecast_steps = st.sidebar.number_input("Forecast Steps", 1, 50, 10)
 
 selected_models = st.sidebar.multiselect(
     "Select Models",
-    ["ARIMA", "SARIMA", "XGBoost", "LSTM"] if HAS_TF else ["ARIMA", "SARIMA", "XGBoost"],
-    default=["ARIMA", "SARIMA", "XGBoost"]
+    ["XGBoost", "ARIMA", "SARIMA", "LSTM"] if HAS_TF else ["XGBoost", "ARIMA", "SARIMA"],
+    default=["XGBoost"]
 )
 
 # --- Main Page ---
 st.title("📈 Stock Market Analysis")
-st.markdown("### AI-Powered Multi-Model Deployment")
+st.markdown("### XGBoost-Powered Forecasting Engine")
+st.markdown("**Primary Model**: XGBoost | **Comparison Models**: ARIMA, SARIMA, LSTM")
 
 data_series = generate_data(data_points)
 
