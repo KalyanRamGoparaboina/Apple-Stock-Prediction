@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS for Premium Look
+# Custom CSS for Premium Look (Simplified for Cloud Stability)
 st.markdown("""
 <style>
     .main {
@@ -26,35 +26,23 @@ st.markdown("""
     .stApp {
         background-color: transparent;
     }
-    .css-1d391kg {
-        background-color: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-    }
     .metric-card {
         background: rgba(255, 255, 255, 0.05);
         padding: 20px;
         border-radius: 15px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         text-align: center;
+        margin-bottom: 10px;
     }
     h1, h2, h3 {
-        font-family: 'Inter', sans-serif;
-        font-weight: 700 !important;
-        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #8b5cf6 !important;
     }
     .stButton>button {
         background: linear-gradient(90deg, #3b82f6, #8b5cf6);
         color: white;
         border: none;
         border-radius: 8px;
-        padding: 10px 24px;
         transition: all 0.3s ease;
-    }
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
     }
 </style>
 """, unsafe_allow_html=True)
