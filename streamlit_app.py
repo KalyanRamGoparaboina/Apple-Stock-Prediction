@@ -10,7 +10,7 @@ import time
 
 # Styling and Page Config
 st.set_page_config(
-    page_title="Stock market Analysis",
+    page_title="Stock Market Analysis",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -80,7 +80,7 @@ selected_models = st.sidebar.multiselect(
 )
 
 # --- Main Page ---
-st.title("📈 Stock market Analysis")
+st.title("📈 Stock Market Analysis")
 st.markdown("### AI-Powered Multi-Model Deployment")
 
 data_series = generate_data(data_points)
