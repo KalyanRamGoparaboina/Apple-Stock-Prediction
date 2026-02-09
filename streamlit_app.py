@@ -72,32 +72,28 @@ except ImportError:
 @st.cache_data
 def generate_data(n_points=200):
     np.random.seed(42)
-    # Simulate Apple-like stock price (random walk with drift and seasonality)
-    start_price = 150
-    returns = np.random.normal(0.0005, 0.01, n_points) # Mean drift of 0.05% per step
-    price = start_price * np.exp(np.cumsum(returns))
-    # Add some seasonality
-    time_points = np.arange(n_points)
-    price += 10 * np.sin(2 * np.pi * time_points / 20)
-    return pd.Series(price)
+    time_pts = np.arange(n_points)
+    # Trend + Seasonality + Noise (Exact formula from time_series_models.py)
+    data = 10 + 0.1 * time_pts + 5 * np.sin(2 * np.pi * time_pts / 12) + np.random.normal(0, 1, n_points)
+    return pd.Series(data)
 
 # --- Sidebar ---
-st.sidebar.image("https://img.icons8.com/color/100/apple-logo.png", width=80)
-st.sidebar.title("Apple Stock AI")
+st.sidebar.image("https://img.icons8.com/isometric/100/line-chart.png", width=80)
+st.sidebar.title("Forecasting Engine")
 st.sidebar.markdown("---")
 
-data_points = st.sidebar.slider("Historical Days", 50, 500, 200)
-forecast_steps = st.sidebar.number_input("Days to Forecast", 1, 50, 10)
+data_points = st.sidebar.slider("Data Points", 50, 500, 200)
+forecast_steps = st.sidebar.number_input("Forecast Steps", 1, 50, 10)
 
 selected_models = st.sidebar.multiselect(
-    "Select Forecasting Models",
+    "Select Models",
     ["ARIMA", "SARIMA", "XGBoost", "LSTM"] if HAS_TF else ["ARIMA", "SARIMA", "XGBoost"],
     default=["ARIMA", "SARIMA", "XGBoost"]
 )
 
 # --- Main Page ---
-st.title("🍎 Apple Stock Insight")
-st.markdown("### AI-Powered Market Forecasting Engine")
+st.title("📈 Time Series Forecasting")
+st.markdown("### AI-Powered Multi-Model Deployment")
 
 data_series = generate_data(data_points)
 
@@ -106,7 +102,7 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown("#### Real-time Training & Forecasting")
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(data_series.index, data_series.values, label='Historical Data', color='#475569', linewidth=2)
+    ax.plot(data_series.index, data_series.values, label='Original Data', color='#475569', linewidth=2, alpha=0.8)
     ax.set_facecolor('#0f172a')
     fig.patch.set_facecolor('#0f172a')
     ax.spines['bottom'].set_color('#ffffff')
@@ -125,29 +121,29 @@ with col1:
         progress_bar = st.progress(0)
         status_text = st.empty()
         
-        # --- ARAMA ---
+        # --- ARIMA ---
         if "ARIMA" in selected_models:
-            status_text.text("Training ARIMA...")
+            status_text.text("Logic: ARIMA(5, 1, 0)...")
             model = ARIMA(data_series, order=(5, 1, 0))
             fit = model.fit()
             forecast = fit.forecast(steps=forecast_steps)
             results['ARIMA'] = forecast
-            ax.plot(forecast_index, forecast, label='ARIMA', color='#3b82f6', linestyle='--')
-            progress_bar.progress(33)
+            ax.plot(forecast_index, forecast, label='ARIMA Forecast', color='#3b82f6', linestyle='--')
+            progress_bar.progress(25)
 
         # --- SARIMA ---
         if "SARIMA" in selected_models:
-            status_text.text("Training SARIMA...")
+            status_text.text("Logic: SARIMAX(1, 1, 1)x(1, 1, 1, 12)...")
             model = SARIMAX(data_series, order=(1, 1, 1), seasonal_order=(1, 1, 1, 12))
             fit = model.fit(disp=False)
             forecast = fit.forecast(steps=forecast_steps)
             results['SARIMA'] = forecast
-            ax.plot(forecast_index, forecast, label='SARIMA', color='#10b981', linestyle='--')
-            progress_bar.progress(66)
+            ax.plot(forecast_index, forecast, label='SARIMA Forecast', color='#10b981', linestyle='--')
+            progress_bar.progress(50)
 
         # --- XGBoost ---
         if "XGBoost" in selected_models:
-            status_text.text("Training XGBoost...")
+            status_text.text("Logic: XGBRegressor with 3 Lags...")
             df = pd.DataFrame(data_series, columns=['val'])
             for i in range(1, 4):
                 df[f'lag_{i}'] = df['val'].shift(i)
@@ -157,42 +153,72 @@ with col1:
             model = XGBRegressor(n_estimators=100)
             model.fit(X, y)
             
-            # Multi-step forecast for XGBoost
-            last_valid = df.iloc[-1:].copy()
+            # Multi-step
+            lags = list(data_series.values[-3:][::-1])
             xgb_forecast = []
-            curr_val = last_valid['val'].values[0]
-            lags = [last_valid['val'].values[0], last_valid['lag_1'].values[0], last_valid['lag_2'].values[0]]
-            
             for _ in range(forecast_steps):
                 pred = model.predict(np.array([lags]).reshape(1, -1))[0]
                 xgb_forecast.append(pred)
                 lags = [pred] + lags[:-1]
             
             results['XGBoost'] = xgb_forecast
-            ax.plot(forecast_index, xgb_forecast, label='XGBoost', color='#f59e0b', linestyle='--')
+            ax.plot(forecast_index, xgb_forecast, label='XGBoost Forecast', color='#f59e0b', linestyle='--')
+            progress_bar.progress(75)
+
+        # --- LSTM ---
+        if "LSTM" in selected_models and HAS_TF:
+            status_text.text("Logic: LSTM with 10 Look-back...")
+            scaler = MinMaxScaler()
+            scaled_data = scaler.fit_transform(data_series.values.reshape(-1, 1))
+            X_lstm, y_lstm = [], []
+            look_back = 10
+            for i in range(look_back, len(scaled_data)):
+                X_lstm.append(scaled_data[i-look_back:i, 0])
+                y_lstm.append(scaled_data[i, 0])
+            X_lstm, y_lstm = np.array(X_lstm), np.array(y_lstm)
+            X_lstm = X_lstm.reshape((X_lstm.shape[0], X_lstm.shape[1], 1))
+            
+            lstm_model = Sequential([
+                LSTM(50, activation='relu', input_shape=(look_back, 1)),
+                Dense(1)
+            ])
+            lstm_model.compile(optimizer='adam', loss='mse')
+            lstm_model.fit(X_lstm, y_lstm, epochs=10, verbose=0)
+            
+            # Forecast
+            curr_batch = scaled_data[-look_back:].reshape((1, look_back, 1))
+            lstm_forecast = []
+            for _ in range(forecast_steps):
+                pred_scaled = lstm_model.predict(curr_batch, verbose=0)
+                lstm_forecast.append(pred_scaled[0][0])
+                curr_batch = np.append(curr_batch[:, 1:, :], pred_scaled.reshape(1, 1, 1), axis=1)
+            
+            final_lstm = scaler.inverse_transform(np.array(lstm_forecast).reshape(-1, 1)).flatten()
+            results['LSTM'] = final_lstm
+            ax.plot(forecast_index, final_lstm, label='LSTM Forecast', color='#ec4899', linestyle='--')
             progress_bar.progress(100)
 
-        status_text.success("All models processed!")
+        status_text.success("Deployment Sync Complete!")
         ax.legend(facecolor='#1e293b', edgecolor='#ffffff', labelcolor='#ffffff')
         st.pyplot(fig)
 
 with col2:
-    st.markdown("#### Model Performance Metrics")
+    st.markdown("#### Intelligence Metrics")
     if not results:
-        st.info("Run the models to see performance metrics here.")
+        st.info("Start engine to view metrics.")
     else:
         for m_name, m_data in results.items():
             st.markdown(f"""
             <div class="metric-card">
-                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 5px;">{m_name} Confidence</p>
-                <h2 style="margin: 0;">{np.random.randint(85, 98)}%</h2>
+                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 5px;">{m_name} Engine</p>
+                <h3 style="margin: 0; color: #ffffff;">Operational</h3>
             </div>
             """, unsafe_allow_html=True)
             st.write("")
 
-# --- Data Table Section ---
-with st.expander("View Underlying Data"):
+# --- Data Table ---
+with st.expander("Raw Data Source"):
     st.dataframe(data_series, use_container_width=True)
 
 st.markdown("---")
-st.markdown("<p style='text-align: center; color: #64748b;'>ProphetFlow AI Engine © 2026 | Built for Performance</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #64748b;'>AI Forecasting Dashboard | Built from Original Source Code</p>", unsafe_allow_html=True)
