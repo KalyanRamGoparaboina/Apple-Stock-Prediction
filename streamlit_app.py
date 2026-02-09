@@ -89,23 +89,15 @@ col1, col2 = st.columns([2, 1])
 
 with col1:
     st.markdown("#### Real-time Training & Forecasting")
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(data_series.index, data_series.values, label='Original Data', color='#475569', linewidth=2, alpha=0.8)
-    ax.set_facecolor('#0f172a')
-    fig.patch.set_facecolor('#0f172a')
-    ax.spines['bottom'].set_color('#ffffff')
-    ax.spines['top'].set_color('#ffffff') 
-    ax.spines['right'].set_color('#ffffff')
-    ax.spines['left'].set_color('#ffffff')
-    ax.tick_params(axis='x', colors='#ffffff')
-    ax.tick_params(axis='y', colors='#ffffff')
-    ax.grid(color='#1e293b', linestyle='--')
-
+    
     forecast_index = np.arange(len(data_series), len(data_series) + forecast_steps)
     
-    results = {}
+    # Initialize session state for results
+    if 'results' not in st.session_state:
+        st.session_state.results = {}
 
     if st.button("Execute Models"):
+        st.session_state.results = {}  # Clear previous results
         progress_bar = st.progress(0)
         status_text = st.empty()
         
@@ -115,8 +107,7 @@ with col1:
             model = ARIMA(data_series, order=(5, 1, 0))
             fit = model.fit()
             forecast = fit.forecast(steps=forecast_steps)
-            results['ARIMA'] = forecast
-            ax.plot(forecast_index, forecast, label='ARIMA Forecast', color='#3b82f6', linestyle='--')
+            st.session_state.results['ARIMA'] = forecast
             progress_bar.progress(25)
 
         # --- SARIMA ---
@@ -125,8 +116,7 @@ with col1:
             model = SARIMAX(data_series, order=(1, 1, 1), seasonal_order=(1, 1, 1, 12))
             fit = model.fit(disp=False)
             forecast = fit.forecast(steps=forecast_steps)
-            results['SARIMA'] = forecast
-            ax.plot(forecast_index, forecast, label='SARIMA Forecast', color='#10b981', linestyle='--')
+            st.session_state.results['SARIMA'] = forecast
             progress_bar.progress(50)
 
         # --- XGBoost ---
@@ -138,7 +128,7 @@ with col1:
             df.dropna(inplace=True)
             X = df.drop('val', axis=1)
             y = df['val']
-            model = XGBRegressor(n_estimators=100)
+            model = XGBRegressor(n_estimators=100, verbosity=0)
             model.fit(X, y)
             
             # Multi-step
@@ -149,8 +139,7 @@ with col1:
                 xgb_forecast.append(pred)
                 lags = [pred] + lags[:-1]
             
-            results['XGBoost'] = xgb_forecast
-            ax.plot(forecast_index, xgb_forecast, label='XGBoost Forecast', color='#f59e0b', linestyle='--')
+            st.session_state.results['XGBoost'] = xgb_forecast
             progress_bar.progress(75)
 
         # --- LSTM ---
@@ -182,20 +171,47 @@ with col1:
                 curr_batch = np.append(curr_batch[:, 1:, :], pred_scaled.reshape(1, 1, 1), axis=1)
             
             final_lstm = scaler.inverse_transform(np.array(lstm_forecast).reshape(-1, 1)).flatten()
-            results['LSTM'] = final_lstm
-            ax.plot(forecast_index, final_lstm, label='LSTM Forecast', color='#ec4899', linestyle='--')
+            st.session_state.results['LSTM'] = final_lstm
             progress_bar.progress(100)
 
         status_text.success("Deployment Sync Complete!")
+    
+    # Display the plot (outside button callback)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(data_series.index, data_series.values, label='Original Data', color='#475569', linewidth=2, alpha=0.8)
+    ax.set_facecolor('#0f172a')
+    fig.patch.set_facecolor('#0f172a')
+    ax.spines['bottom'].set_color('#ffffff')
+    ax.spines['top'].set_color('#ffffff') 
+    ax.spines['right'].set_color('#ffffff')
+    ax.spines['left'].set_color('#ffffff')
+    ax.tick_params(axis='x', colors='#ffffff')
+    ax.tick_params(axis='y', colors='#ffffff')
+    ax.grid(color='#1e293b', linestyle='--')
+    
+    # Plot all results from session state
+    if st.session_state.results:
+        for model_name, forecast_data in st.session_state.results.items():
+            color_map = {
+                'ARIMA': '#3b82f6',
+                'SARIMA': '#10b981',
+                'XGBoost': '#f59e0b',
+                'LSTM': '#ec4899'
+            }
+            ax.plot(forecast_index, forecast_data, 
+                   label=f'{model_name} Forecast', 
+                   color=color_map.get(model_name, '#ffffff'), 
+                   linestyle='--', linewidth=2)
         ax.legend(facecolor='#1e293b', edgecolor='#ffffff', labelcolor='#ffffff')
-        st.pyplot(fig)
+    
+    st.pyplot(fig)
 
 with col2:
     st.markdown("#### Intelligence Metrics")
-    if not results:
+    if not st.session_state.results:
         st.info("Start engine to view metrics.")
     else:
-        for m_name, m_data in results.items():
+        for m_name, m_data in st.session_state.results.items():
             st.markdown(f"""
             <div class="metric-card">
                 <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 5px;">{m_name} Engine</p>
